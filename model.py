@@ -126,10 +126,10 @@ def resnet_v2(input_shape, depth, num_classes=10):
     doubled. Within each stage, the layers have the same number filters and the
     same filter map sizes.
     Features maps sizes:
-    conv1  : 32x32,  16
-    stage 0: 32x32,  64
-    stage 1: 16x16, 128
-    stage 2:  8x8,  256
+    conv1  : 32x32,  64 <= 16
+    stage 0: 32x32,  64 <= 16
+    stage 1: 16x16, 128 <= 32
+    stage 2:  8x8,  256 <= 64
     # Arguments
         input_shape (tensor): shape of input image tensor
         depth (int): number of core convolutional layers
@@ -146,15 +146,57 @@ def resnet_v2(input_shape, depth, num_classes=10):
     inputs = layers.Input(shape=input_shape)
     # v2 performs Conv2D with BN-ReLU on input before splitting into 2 paths
     x = _resnet_layer(inputs=inputs,
-                      num_filters=num_filters_in,
-                      conv_first=True)
+                      num_filters=num_filters_in * 4)
 
     # Instantiate the stack of residual units
     for stage in range(3):
+        if stage == 0:
+            num_filters_out = num_filters_in * 4 
+        else:
+            num_filters_out = num_filters_in * 2
+            
         for res_block in range(num_res_blocks):
+            if res_block == 0:
+                if stage == 0:
+                    activation = None
+                    batch_normalization = False
+                else:
+                    strides = 2  # downsample
             """
-            Question : BottleNeck 버젼의 ResNet 을 직접 구현해보세요
+            Question : BottleNeck 버젼의 ResNet 을 직접 구현해보세요.
+            주의 : _resnet_layer 를 사용하실 때 conv_first=False 로 해주세요.
             """
+            activation = 'relu'
+            batch_normalization = True
+            strides = 1
+            # bottleneck residual unit
+            y = _resnet_layer(inputs=x,
+                              num_filters=num_filters_out // 4,
+                              kernel_size=1,
+                              strides=strides,
+                              activation=activation,
+                              batch_normalization=batch_normalization,
+                              conv_first=False)
+            y = _resnet_layer(inputs=y,
+                              num_filters=num_filters_out // 4,
+                              conv_first=False)
+            
+            y = _resnet_layer(inputs=y,
+                              num_filters=num_filters_out,
+                              kernel_size=1,
+                              conv_first=False)
+            if res_block == 0:
+                # linear projection residual shortcut connection to match
+                # changed dims
+                x = _resnet_layer(inputs=x,
+                                  num_filters=num_filters_out,
+                                  kernel_size=1,
+                                  strides=strides,
+                                  activation="relu",
+                                  batch_normalization=False)
+            x = layers.add([x, y])
+
+        num_filters_in = num_filters_out
 
     # Add classifier on top.
     # v2 has BN-ReLU before Pooling
