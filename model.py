@@ -170,31 +170,7 @@ def resnet_v2(input_shape, depth, num_classes=10):
             batch_normalization = True
             strides = 1
             # bottleneck residual unit
-            y = _resnet_layer(inputs=x,
-                              num_filters=num_filters_out // 4,
-                              kernel_size=1,
-                              strides=strides,
-                              activation=activation,
-                              batch_normalization=batch_normalization,
-                              conv_first=False)
-            y = _resnet_layer(inputs=y,
-                              num_filters=num_filters_out // 4,
-                              conv_first=False)
-            
-            y = _resnet_layer(inputs=y,
-                              num_filters=num_filters_out,
-                              kernel_size=1,
-                              conv_first=False)
-            if res_block == 0:
-                # linear projection residual shortcut connection to match
-                # changed dims
-                x = _resnet_layer(inputs=x,
-                                  num_filters=num_filters_out,
-                                  kernel_size=1,
-                                  strides=strides,
-                                  activation="relu",
-                                  batch_normalization=False)
-            x = layers.add([x, y])
+#            
 
         num_filters_in = num_filters_out
 
