@@ -311,5 +311,9 @@ class L1FilterPruning(BasePruning):
         """
         Q : l1_norm 이 작은 filter 의 index 를 찾는 로직을 구현해보세요
         """
+        l1_norm = np.linalg.norm(layer_weight_mtx_reshaped, ord=1, axis=1)
+        idxes = l1_norm.argsort()
+        # Compute filter indices which can be pruned
+        channel_indices_to_prune = idxes[:nb_channels_to_remove]
 
         # return channel_indices_to_prune
